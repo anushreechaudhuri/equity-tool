@@ -1,11 +1,9 @@
 geopandas
 numpy
 rtree
-pygeos
 shapely
 fiona
 s3fs
 kaleido
 plotly
-python_version
 pyproj

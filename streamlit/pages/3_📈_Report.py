@@ -56,7 +56,6 @@ with st.spinner("Loading demographic data..."):
     dac = load_dac()
 with st.spinner("Loading boundary data..."):
     boundary = load_boundary(level)
-    dac.crs = {"init": boundary.crs}
     dac = dac.to_crs(boundary.crs)
     nhpd = nhpd.to_crs(boundary.crs)
 

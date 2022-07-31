@@ -8,4 +8,3 @@ kaleido
 plotly
 pyproj
 pdfkit
-subprocess

@@ -2,7 +2,6 @@ import pandas as pd
 from datetime import datetime
 import base64
 import pdfkit
-import subprocess
 
 
 def highlight(value):

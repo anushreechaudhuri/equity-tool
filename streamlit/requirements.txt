@@ -7,3 +7,5 @@ s3fs
 kaleido
 plotly
 pyproj
+pdfkit
+subprocess

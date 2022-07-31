@@ -33,12 +33,12 @@ level = st.selectbox(
 
 @st.experimental_memo(show_spinner=False, max_entries=1, persist="disk")
 def load_nhpd():
-    return gpd.read_file(f"s3://equity-tool/report/states.geojson")
+    return gpd.read_file(f"s3://equity-tool/report/nhpd.geojson")
 
 
 @st.experimental_memo
 def load_dac():
-    return gpd.read_file(f"s3://equity-tool/report/states.geojson")
+    return gpd.read_file(f"s3://equity-tool/report/dac.geojson")
 
 
 @st.experimental_memo

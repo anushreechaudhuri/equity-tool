@@ -7,6 +7,11 @@ import plotly.graph_objects as go
 import json
 import os
 import s3fs
+from datetime import datetime
+import base64
+import subprocess
+from generate_report import generate_from_data
+
 
 # Enter file paths
 NHPD = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/nhpd.geojson"
@@ -14,10 +19,10 @@ DAC = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equit
 TT = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/tt_shp.geojson"
 COUNTIES = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/counties.geojson"
 STATES = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/states.geojson"
+s3 = s3fs.S3FileSystem(anon=False)
 
 st.set_page_config(layout="wide")
 st.title("Generate a Report for Your Location")
-s3 = s3fs.S3FileSystem(anon=False)
 
 level = st.selectbox(
     options=("Census Tract ID", "County", "State", "Tribe and Territory"),
@@ -26,7 +31,7 @@ level = st.selectbox(
 )
 
 
-@st.experimental_memo
+@st.experimental_memo(show_spinner=False, max_entries=1, persist="disk")
 def load_nhpd():
     return gpd.read_file(f"s3://equity-tool/report/nhpd.geojson")
 
@@ -59,7 +64,6 @@ with st.spinner("Loading boundary data..."):
     dac = dac.to_crs(boundary.crs)
     nhpd = nhpd.to_crs(boundary.crs)
 
-
 selected = st.selectbox(
     options=boundary["NAME"].unique(), label=f"Select a {level}", index=1
 )
@@ -70,7 +74,7 @@ with st.spinner("Loading report - map and tables..."):
     # Spatial join of nhpd and boundary shape
     nhpd_select = gpd.sjoin(shape, nhpd, how="inner", predicate="intersects")
     # Spatial join of dac and boundary shape
-    def dac_select(shape, level):
+    def dac_selector(shape, level):
         if level == "Census Tract ID":
             return shape
         if level == "County":
@@ -86,7 +90,7 @@ with st.spinner("Loading report - map and tables..."):
         else:
             return dac.drop(dac[dac["GEOID"].str[:].ne(shape["GEOID"].values[0])].index)
 
-    dac_select = dac_select(shape, level)
+    dac_select = dac_selector(shape, level)
     if nhpd_select.empty:
         st.write("No housing data found for this location.")
     if dac_select.empty:
@@ -155,4 +159,18 @@ with st.spinner("Loading report - map and tables..."):
                 label="Download Census Tract Data", data=dac_display.to_csv()
             )
         with st.spinner("Generating report..."):
-            st.download_button(label="Download Report", data=nhpd_select.to_csv())
+            image = {}
+
+            with open("fig.png", "rb") as f:
+                encoded_string = base64.b64encode(f.read())
+                image["map"] = encoded_string.decode("utf-8")
+                image[
+                    "map"
+                ] = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(
+                    image["map"]
+                )
+            generate_from_data(shape, image["map"], dac_select, nhpd_select)
+            with open("out.pdf", "rb") as file:
+                btn = st.download_button(
+                    label="Download Report", data=file, file_name="report.png"
+                )

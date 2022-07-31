@@ -275,9 +275,7 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
     # subprocess.call(
     #     ["lessc", "templates/compiled-styles.css", "templates/simple-styles.css"]
     # )
-    import os
-    style_path = os.path.join(os.path.dirname(__file__), "simple-styles.css")
-    pdfkit.from_string(html, out_path, options=options, css=style_path)
+    pdfkit.from_string(html, out_path, options=options, css="simple-styles.css")
 
 
 generate_from_data(shape, image["map"], dac_select, nhpd_select)

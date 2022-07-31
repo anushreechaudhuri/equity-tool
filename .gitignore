@@ -1,3 +1,4 @@
 
 streamlit/.streamlit/secrets.toml
 streamlit/Pipfile
+*.pyc

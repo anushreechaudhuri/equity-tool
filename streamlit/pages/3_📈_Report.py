@@ -172,5 +172,5 @@ with st.spinner("Loading report - map and tables..."):
             generate_from_data(shape, image["map"], dac_select, nhpd_select)
             with open("out.pdf", "rb") as file:
                 btn = st.download_button(
-                    label="Download Report", data=file, file_name="report.png"
+                    label="Download Report", data=file, file_name=f"{str(shape["NAME"])}.pdf"
                 )

@@ -4,6 +4,13 @@ import base64
 import pdfkit
 
 
+def percent_bar(value):
+    try:
+        return round(0.93 * value)
+    except:
+        return 0
+
+
 def highlight(value):
     try:
         value = float(value)
@@ -97,8 +104,8 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
             <b>Population:</b> {tract['population']} </br>
             </div>
             <div class="inline-block align-top">
-            <b>QCT Status:</b> <mark class="{highlight(tract['DAC_status'])}">{tract['DAC_status']}</mark></br>
-            <b>DAC Status:</b> <mark class="{highlight(tract['QCT_status'])}">{tract['QCT_status']}</mark></br>
+            <b>DAC Status:</b> <mark class="{highlight(tract['DAC_status'])}">{tract['DAC_status']}</mark></br>
+            <b>QCT Status:</b> <mark class="{highlight(tract['QCT_status'])}">{tract['QCT_status']}</mark></br>
             <b>State Ranking:</b> <mark class="{highlight(tract['tract_state_percentile'])}">{tract['tract_state_percentile']}</mark> </br>
             <b>National Ranking:</b> <mark class="{highlight(tract['tract_national_percentile'])}">{tract['tract_national_percentile']}</mark> </br>
             </div>
@@ -111,54 +118,54 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
             <tr>
             <td>Energy Burden</td>
             <td>
-                <div class="{color_bar(tract["avg_energy_burden_natl_pctile"])}" style="width: {round(0.93 * tract["avg_energy_burden_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["avg_energy_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_energy_burden_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["avg_energy_burden_natl_pctile"]}</div>
             </td>
             </tr>
             <tr>
             <td>Housing Burden</td>
             <td>
-                <div class="{color_bar(tract["avg_housing_burden_natl_pctile"])}" style="width: {round(0.93 * tract["avg_housing_burden_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["avg_housing_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_housing_burden_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["avg_housing_burden_natl_pctile"]}</div>
             </td>
             </tr>
                 <tr>
             <td>Transport Burden</td>
             <td>
-                <div class="{color_bar(tract["avg_transport_burden_natl_pctile"])}" style="width: {round(0.93 * tract["avg_transport_burden_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["avg_transport_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_transport_burden_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["avg_transport_burden_natl_pctile"]}</div>
             </td>
             </tr>
             <tr>
             <td>Low Income (AMI)</td>
             <td>
-                <div class="{color_bar(tract["lowincome_ami_pct_natl_pctile"])}" style="width: {round(0.93 * tract["lowincome_ami_pct_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["lowincome_ami_pct_natl_pctile"])}" style="width: {percent_bar(tract["lowincome_ami_pct_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["lowincome_ami_pct_natl_pctile"]}</div>
             </td>
             </tr>
             <tr>
             <td>Nonwhite Population</td>
             <td>
-                <div class="{color_bar(tract["nonwhite_pct_natl_pctile"])}" style="width: {round(0.93 * tract["nonwhite_pct_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["nonwhite_pct_natl_pctile"])}" style="width: {percent_bar(tract["nonwhite_pct_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["nonwhite_pct_natl_pctile"]}</div>
             </td>
             </tr>
             <tr>
             <td>Incomplete Plumbing</td>
             <td>
-                <div class="{color_bar(tract["incomplete_plumbing_pct_natl_pctile"])}" style="width: {round(0.93 * tract["incomplete_plumbing_pct_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["incomplete_plumbing_pct_natl_pctile"])}" style="width: {percent_bar(tract["incomplete_plumbing_pct_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["incomplete_plumbing_pct_natl_pctile"]}</div>
             </td>
             </tr>
             <td>Lead Paint</td>
             <td>
-                <div class="{color_bar(tract["lead_paint_pct_natl_pctile"])}" style="width: {round(0.93 * tract["lead_paint_pct_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["lead_paint_pct_natl_pctile"])}" style="width: {percent_bar(tract["lead_paint_pct_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["lead_paint_pct_natl_pctile"]}</div>
             </td>
             </tr>
             <td>Non-Grid Heating</td>
             <td>
-                <div class="{color_bar(tract["nongrid_heat_pct_natl_pctile"])}" style="width: {round(0.93 * tract["nongrid_heat_pct_natl_pctile"])}%"></div>
+                <div class="{color_bar(tract["nongrid_heat_pct_natl_pctile"])}" style="width: {percent_bar(tract["nongrid_heat_pct_natl_pctile"])}%"></div>
                 <div class="inline-block align-middle">{tract["nongrid_heat_pct_natl_pctile"]}</div>
             </td>
             </tr>
@@ -182,10 +189,9 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
             <div class="inline-block align-top mr-8">
             <b>Street Address:</b> {property["Street Address"]}</br>
             <b>City:</b> {property["City"]}</br>
-            <b>County:</b> {property["County"]}</br>
             <b>State:</b> {property["State"]}</br>
             <b>Zip Code:</b> {property["Zip Code"]}</br>
-            <b>Subsidy:</b> {property["Subsidy Name"] + ", " + property["Subsidy Subname"]}</br>
+            <b>Subsidy:</b> {str(property["Subsidy Name"]) + ", " + str(property["Subsidy Subname"])}</br>
             <b>Owner Name:</b> {property["Owner Name"]} </br>
             <b>Rent to FMR Ratio:</b> {property["Rent to FMR Ratio"]} </br>
             </div>

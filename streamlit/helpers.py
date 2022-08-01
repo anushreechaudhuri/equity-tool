@@ -2,6 +2,7 @@ import pandas as pd
 from datetime import datetime
 import base64
 import pdfkit
+import numpy as np
 
 
 def percent_bar(value):
@@ -27,6 +28,92 @@ def color_bar(value):
         return "bad-bar"
     return "good-bar"
 
+
+def zoom_center(
+    lons: tuple = None,
+    lats: tuple = None,
+    lonlats: tuple = None,
+    format: str = "lonlat",
+    projection: str = "mercator",
+    width_to_height: float = 2.0,
+):
+    """Finds optimal zoom and centering for a plotly mapbox.
+    Must be passed (lons & lats) or lonlats.
+    Temporary solution awaiting official implementation, see:
+    https://github.com/plotly/plotly.js/issues/3434
+
+    Parameters
+    --------
+    lons: tuple, optional, longitude component of each location
+    lats: tuple, optional, latitude component of each location
+    lonlats: tuple, optional, gps locations
+    format: str, specifying the order of longitud and latitude dimensions,
+        expected values: 'lonlat' or 'latlon', only used if passed lonlats
+    projection: str, only accepting 'mercator' at the moment,
+        raises `NotImplementedError` if other is passed
+    width_to_height: float, expected ratio of final graph's with to height,
+        used to select the constrained axis.
+
+    Returns
+    --------
+    zoom: float, from 1 to 20
+    center: dict, gps position with 'lon' and 'lat' keys
+
+    >>> print(zoom_center((-109.031387, -103.385460),
+    ...     (25.587101, 31.784620)))
+    (5.75, {'lon': -106.208423, 'lat': 28.685861})
+    """
+    if lons is None and lats is None:
+        if isinstance(lonlats, tuple):
+            lons, lats = zip(*lonlats)
+        else:
+            raise ValueError("Must pass lons & lats or lonlats")
+
+    maxlon, minlon = max(lons), min(lons)
+    maxlat, minlat = max(lats), min(lats)
+    center = {
+        "lon": round((maxlon + minlon) / 2, 6),
+        "lat": round((maxlat + minlat) / 2, 6),
+    }
+
+    # longitudinal range by zoom level (20 to 1)
+    # in degrees, if centered at equator
+    lon_zoom_range = np.array(
+        [
+            0.0007,
+            0.0014,
+            0.003,
+            0.006,
+            0.012,
+            0.024,
+            0.048,
+            0.096,
+            0.192,
+            0.3712,
+            0.768,
+            1.536,
+            3.072,
+            6.144,
+            11.8784,
+            23.7568,
+            47.5136,
+            98.304,
+            190.0544,
+            360.0,
+        ]
+    )
+
+    if projection == "mercator":
+        margin = 1.2
+        height = (maxlat - minlat) * margin * width_to_height
+        width = (maxlon - minlon) * margin
+        lon_zoom = np.interp(width, lon_zoom_range, range(20, 0, -1))
+        lat_zoom = np.interp(height, lon_zoom_range, range(20, 0, -1))
+        zoom = round(min(lon_zoom, lat_zoom), 2)
+    else:
+        raise NotImplementedError(f"{projection} projection is not implemented")
+
+    return zoom, center
 
 
 def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
@@ -150,13 +237,19 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
         ]
     )
 
+    with open("simple-styles.css", "r") as f:
+        style = f.read()
+
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link href="compiled-styles.css" rel="stylesheet" />
+        <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+        <style>
+        {style}
+        </style>
     </head>
     <body class="w-screen">
         <div class="w-full h-fit bg-[#00583C] p-2 px-4 relative">
@@ -182,7 +275,7 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
             <h1 class="font-semibold leading-tight text-lg">Subsidized Affordable </br>  Housing Properties</h1>
             </div>
             <div class="w-[32%] inline-block align-top">
-            <h1 class="font-bold text-4xl">{dac_select['avg_energy_burden_natl_pctile'].mean()}</h1>
+            <h1 class="font-bold text-4xl">{dac_select['avg_energy_burden_natl_pctile'].mean():.2f}</h1>
             <h1 class="font-semibold leading-tight text-lg break-words">Average Energy </br> Burden Percentile</h1>
             </div>
         </div>
@@ -192,11 +285,11 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
             <h1 class="font-semibold leading-tight text-lg">Total Housing Tax Credit </br>   Eligible Census Tracts</h1>
             </div>
             <div class="w-[32%] h-full inline-block align-top">
-            <h1 class="font-bold text-4xl">{nhpd_select['Assisted Units'].sum()}</h1>
+            <h1 class="font-bold text-4xl">{int(nhpd_select['Assisted Units'].sum())}</h1>
             <h1 class="font-semibold leading-tight text-lg">Total </br>  Assisted Units</h1>
             </div>
             <div class="w-[32%] inline-block align-top">
-            <h1 class="font-bold text-4xl">{dac_select['nonwhite_pct_natl_pctile'].mean()}</h1>
+            <h1 class="font-bold text-4xl">{dac_select['nonwhite_pct_natl_pctile'].mean():.2f}</h1>
             <h1 class="font-semibold leading-tight text-lg break-words">Average Nonwhite </br> Population Percentile</h1>
             </div>
         </div>
@@ -217,4 +310,76 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
         "margin-left": "0in",
     }
 
+    # with open("out.html", "w") as f:
+    #     f.write(html)
+
+    # subprocess.call(
+    #     ["lessc", "templates/compiled-styles.css", "templates/simple-styles.css"]
+    # )
     pdfkit.from_string(html, out_path, options=options, css="simple-styles.css")
+
+
+if __name__ == "__main__":
+    shape = pd.DataFrame(
+        {
+            "NAME": ["San Diego County"],
+        }
+    )
+
+    dac_select = pd.DataFrame(
+        {
+            "GEOID": ["012345678910"],
+            "city": ["San Diego"],
+            "county_name": ["San Diego"],
+            "population": [4444.22],
+            "DAC_status": ["Disadvantaged"],
+            "QCT_status": ["Not Eligible"],
+            "lead_paint_pct_natl_pctile": [78.81],
+            "avg_energy_burden_natl_pctile": [11.11],
+            "avg_housing_burden_natl_pctile": [50],
+            "avg_transport_burden_natl_pctile": [55.53],
+            "incomplete_plumbing_pct_natl_pctile": [0.0],
+            "lowincome_ami_pct_natl_pctile": [23.1],
+            "nongrid_heat_pct_natl_pctile": [100.00],
+            "nonwhite_pct_natl_pctile": [35.4],
+            "tract_national_percentile": [0.0],
+            "tract_state_percentile": [100.00],
+        }
+    )
+
+    for col in dac_select.columns:
+        if "pctile" in col or "percentile" in col:
+            dac_select[col + "_bars"] = round(0.93 * dac_select[col])
+
+    nhpd_select = pd.DataFrame(
+        {
+            "Property Name": ["Lone Bluffs"],
+            "Street Address": ["14230 San Diego Ave"],
+            "City": ["San Diego"],
+            "County": ["San Diego"],
+            "State": ["CA"],
+            "Start Date": ["2019-01-01"],
+            "End Date": ["2019-02-01"],
+            "Earliest Construction Date": ["2019-01-01"],
+            "Latest Construction Date": ["2019-02-01"],
+            "Rent to FMR Ratio": [1],
+            "Subsidy Name": ["Section 8"],
+            "Subsidy Subname": ["PRAC"],
+            "Owner Name": ["Happy Villages Apartments"],
+            "Known Total Units": [50],
+            "Assisted Units": [15],
+            "Zip Code": ["92129"],
+        }
+    )
+    image = {}
+
+    with open("fig.png", "rb") as f:
+        encoded_string = base64.b64encode(f.read())
+        image["map"] = encoded_string.decode("utf-8")
+        image[
+            "map"
+        ] = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(
+            image["map"]
+        )
+
+    generate_from_data(shape, image["map"], dac_select, nhpd_select)

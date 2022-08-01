@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import pickle
 import numpy as np
 import geopandas as gpd
 import plotly.express as px
@@ -10,10 +11,13 @@ import s3fs
 from datetime import datetime
 import base64
 import subprocess
-from generate_report import generate_from_data
+from helpers import generate_from_data, zoom_center
 
 
 # Enter file paths
+DATA_PATH = (
+    "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app/equity-tool/DATA.pkl"
+)
 NHPD = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/nhpd.geojson"
 DAC = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/dac.geojson"
 TT = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/tt_shp.geojson"
@@ -31,38 +35,38 @@ level = st.selectbox(
 )
 
 
-@st.experimental_memo(show_spinner=False, max_entries=1, persist="disk")
-def load_nhpd():
-    return gpd.read_file(f"s3://equity-tool/report/nhpd.geojson")
+# @st.experimental_memo(show_spinner=False, max_entries=1, persist="disk")
+# def load_nhpd():
+#     return gpd.read_file(f"s3://equity-tool/report/nhpd.geojson")
 
 
-@st.experimental_memo
-def load_dac():
-    return gpd.read_file(f"s3://equity-tool/report/dac.geojson")
+# @st.experimental_memo
+# def load_dac():
+#     return gpd.read_file(f"s3://equity-tool/report/dac.geojson")
+
+
+with st.spinner("Loading NHPD, DAC, Boundary Data..."):
+    with open(DATA_PATH, "rb") as f:
+        nhpd, dac, boundary = pickle.load(f)
 
 
 @st.experimental_memo
 def load_boundary(level):
     if level == "Census Tract ID":
-        dac_boundary = load_dac()
+        dac_boundary = dac.copy()
         dac_boundary["NAME"] = dac_boundary["GEOID"]
         return dac_boundary
     elif level == "County":
-        return gpd.read_file(f"s3://equity-tool/report/counties.geojson")
+        return gpd.read_file(COUNTIES)
     elif level == "State":
-        return gpd.read_file(f"s3://equity-tool/report/states.geojson")
+        return gpd.read_file(STATES)
     else:
-        return gpd.read_file(f"s3://equity-tool/report/tt_shp.geojson")
+        return gpd.read_file(TT)
 
 
-with st.spinner("Loading housing data..."):
-    nhpd = load_nhpd()
-with st.spinner("Loading demographic data..."):
-    dac = load_dac()
-with st.spinner("Loading boundary data..."):
-    boundary = load_boundary(level)
-    dac = dac.to_crs(boundary.crs)
-    nhpd = nhpd.to_crs(boundary.crs)
+boundary = load_boundary(level)
+dac = dac.to_crs(boundary.crs)
+nhpd = nhpd.to_crs(boundary.crs)
 
 selected = st.selectbox(
     options=boundary["NAME"].unique(), label=f"Select a {level}", index=1
@@ -97,44 +101,79 @@ with st.spinner("Loading report - map and tables..."):
         st.write("No census tracts found for this location.")
     if dac_select.empty == False or nhpd_select.empty == False:
         with st.expander("Map"):
-            fig = (
-                px.scatter_mapbox(
-                    nhpd_select,
-                    lat="lat",
-                    lon="lon",
-                    hover_data=["Property Name", "Street Address"],
-                )
-                .update_traces(marker={"size": 5, "opacity": 0.5, "color": "red"})
-                .update_layout(
-                    mapbox={
-                        "style": "carto-positron",
-                        "layers": [
-                            {
-                                "source": json.loads(dac_select.geometry.to_json()),
-                                "below": "traces",
-                                "type": "fill",
-                                "color": "blue",
-                                "opacity": 0.2,
-                            },
-                            {
-                                "source": json.loads(shape.geometry.to_json()),
-                                "type": "line",
-                                "color": "gray",
-                                "line": {"width": 3},
-                                "below": "traces",
-                            },
-                        ],
-                    },
-                    margin={"l": 0, "r": 0, "t": 0, "b": 0},
-                )
+            import pyproj
+            import pandas as pd
+
+            dac_proj = dac_select.to_crs(pyproj.CRS.from_epsg(4326), inplace=False)
+            dac_proj = dac_proj[~pd.isna(dac_proj.geometry)]
+            colors = [
+                "red" if row.DAC_status == "Disadvantaged" else "black"
+                for _, row in dac_proj.iterrows()
+            ]
+            stroke_width = [
+                2 if row.DAC_status == "Disadvantaged" else 0
+                for _, row in dac_proj.iterrows()
+            ]
+
+            x = json.loads(shape.geometry.to_json())
+            coords = x["features"][0]["geometry"]["coordinates"]
+            zoom, center = zoom_center(
+                lons=[i[0] for i in coords[0]], lats=[i[1] for i in coords[0]]
             )
-            fig.update_geos(fitbounds="locations")
+
+            fig = px.choropleth_mapbox(
+                dac_proj,
+                geojson=dac_proj["geometry"],
+                locations=dac_proj.index,
+                color="avg_energy_burden_natl_pctile",
+                mapbox_style="white-bg",
+                zoom=0.9 * zoom,
+                center=center,
+            )
+            fig.update_layout(
+                mapbox={
+                    "style": "white-bg",
+                    "layers": [
+                        {
+                            "source": json.loads(shape.geometry.to_json()),
+                            "type": "line",
+                            "color": "gray",
+                            "line": {"width": 3},
+                            "below": "traces",
+                        },
+                    ],
+                }
+            )
+
+            fig.update_geos(fitbounds="locations", visible=False)
+            fig.update_traces(
+                marker_line_color=colors,
+                marker_line_width=stroke_width,
+                marker_opacity=0.3,
+            )
+
+            lats = nhpd_select.lat
+            lons = nhpd_select.lon
+
+            png = fig.write_image("fig.png")
+
+            fig.add_scattermapbox(
+                lat=lats,
+                lon=lons,
+                mode="markers+text",
+                marker_size=3,
+                marker_color="green",
+            )
+
             st.plotly_chart(fig, use_container_width=True)
-            image = fig.write_image("fig.png")
+
             with open("fig.png", "rb") as file:
                 btn = st.download_button(
-                    label="Download Map", data=file, file_name="fig.png"
+                    label="Download Map",
+                    data=file,
+                    file_name=f"{shape.iloc[0]['NAME']}.png",
                 )
+
         with st.expander("Tables"):
             nhpd_display = (
                 pd.DataFrame(nhpd_select.drop(["geometry"], axis=1).iloc[:, 8:])
@@ -170,7 +209,10 @@ with st.spinner("Loading report - map and tables..."):
                     image["map"]
                 )
             generate_from_data(shape, image["map"], dac_select, nhpd_select)
+
             with open("out.pdf", "rb") as file:
                 btn = st.download_button(
-                    label="Download Report", data=file, file_name=f"{str(shape["NAME"])}.pdf"
+                    label="Download Report",
+                    data=file,
+                    file_name=f"{shape.iloc[0]['NAME']}.pdf",
                 )

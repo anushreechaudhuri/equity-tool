@@ -28,7 +28,6 @@ def color_bar(value):
     return "good-bar"
 
 
-
 def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
     tracts_html = "\n".join(
         [
@@ -218,3 +217,8 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
     }
 
     pdfkit.from_string(html, out_path, options=options, css="simple-styles.css")
+
+
+# scp -i "streamlit.pem" "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/group.zip" ubuntu@ec2-3-86-107-89.compute-1.amazonaws.com:~/data/group.zip
+# scp "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app/equity-tool/DATA.pkl" anuc@api.oloren.ai:~/data/DATA.pkl
+# scp "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app/equity-tool/DATA.pkl" anuc@api.oloren.ai:~/data/DATA.pkl

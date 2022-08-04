@@ -1,6 +1,6 @@
 # * DACs -> Join DAC Percentiles with Mapping Display Data. Make sure data types are correct (floats, not strings). Join QCT Data.
-# Carto_DACs -> have as few fields as possible, short names
-# Report_DACs -> have all the fields, named well
+# Carto_DACs -> short column names
+# Report_DACs -> full column names
 # Tribes and Territories -> Get from GIS SQLite. Naming format should be same as Counties and States.
 
 import pandas as pd

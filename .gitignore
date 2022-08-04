@@ -2,3 +2,7 @@
 streamlit/.streamlit/secrets.toml
 streamlit/Pipfile
 *.pyc
+*.pkl
+*.png
+*.html
+*.pdf

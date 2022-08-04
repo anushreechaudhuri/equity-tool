@@ -201,7 +201,7 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
         </section>
         """
             for _, tract in dac_select.sort_values(
-                by=["avg_energy_burden_natl_pctile"], ascending=True
+                by=["avg_energy_burden_natl_pctile"], ascending=False
             ).iterrows()
         ]
     )
@@ -320,6 +320,7 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
 
 
 if __name__ == "__main__":
+    # TESTING DATA
     shape = pd.DataFrame(
         {
             "NAME": ["San Diego County"],
@@ -381,5 +382,3 @@ if __name__ == "__main__":
         ] = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(
             image["map"]
         )
-
-    generate_from_data(shape, image["map"], dac_select, nhpd_select)

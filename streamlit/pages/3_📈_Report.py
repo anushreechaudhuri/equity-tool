@@ -23,7 +23,12 @@ TT = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity
 COUNTIES = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/counties.geojson"
 STATES = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/states.geojson"
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Report", page_icon=None, layout="wide", initial_sidebar_state="auto", menu_items={
+         'Get Help': 'https://www.energy.gov/eere/buildings/building-technologies-office',
+         'Report a bug': "https://github.com/anushreechaudhuri/equity-tool",
+         'About': "### National Building Upgrade Challenge Equity Tool"
+     }
+)
 st.title("Generate a Report for Your Location")
 
 level = st.selectbox(

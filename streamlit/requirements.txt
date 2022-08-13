@@ -9,3 +9,5 @@ kaleido
 plotly
 pyproj
 pdfkit
+openpyxl
+bokeh

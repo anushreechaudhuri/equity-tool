@@ -12,7 +12,6 @@ import base64
 import pyproj
 from helpers import generate_from_data, zoom_center
 
-
 # Enter file paths
 DATA_PATH = (
     "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app/equity-tool/DATA.pkl"
@@ -23,30 +22,40 @@ TT = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity
 COUNTIES = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/counties.geojson"
 STATES = "/Users/anushreechaudhuri/pCloud Drive/MIT/MIT Work/DC DOE/app_files/equity-tool/data/report/states.geojson"
 
-st.set_page_config(page_title="Report", page_icon=None, layout="wide", initial_sidebar_state="auto", menu_items={
-         'Get Help': 'https://www.energy.gov/eere/buildings/building-technologies-office',
-         'Report a bug': "https://github.com/anushreechaudhuri/equity-tool",
-         'About': "### National Building Upgrade Challenge Equity Tool"
-     }
-)
+st.set_page_config(
+    page_title="Report",
+    page_icon=None,
+    layout="wide",
+    initial_sidebar_state="auto",
+    menu_items={
+        'Get Help':
+        'https://www.energy.gov/eere/buildings/building-technologies-office',
+        'Report a bug': "https://github.com/anushreechaudhuri/equity-tool",
+        'About': "### National Building Upgrade Challenge Equity Tool"
+    })
 st.title("Generate a Report for Your Location")
 
-level = st.selectbox(
-    options=("Census Tract ID", "County", "State", "Tribe and Territory"),
-    label="Search By",
-    index=1,
-)
+
+def select_level():
+    with st.form("Select Level"):
+        level = st.radio(
+            options=("Census Tract ID", "County", "State",
+                     "Tribe and Territory"),
+            label="Search By",
+            index=1,
+        )
+        if st.form_submit_button("Submit"):
+            return level
 
 
+level = select_level()
 # @st.experimental_memo(show_spinner=False, max_entries=1, persist="disk")
 # def load_nhpd():
 #     return gpd.read_file(f"s3://equity-tool/report/nhpd.geojson")
 
-
 # @st.experimental_memo
 # def load_dac():
 #     return gpd.read_file(f"s3://equity-tool/report/dac.geojson")
-
 
 with st.spinner("Loading housing and census tract data..."):
     with open(DATA_PATH, "rb") as f:
@@ -72,15 +81,16 @@ with st.spinner("Loading boundary data..."):
     dac = dac.to_crs(boundary.crs)
     nhpd = nhpd.to_crs(boundary.crs)
 
-selected = st.selectbox(
-    options=boundary["NAME"].unique(), label=f"Select a {level}", index=1
-)
+selected = st.selectbox(options=boundary["NAME"].unique(),
+                        label=f"Select a {level}",
+                        index=1)
 
 with st.spinner("Loading results..."):
     # Find the row in counties that corresponds to selected "county"
     shape = boundary.loc[boundary["NAME"] == selected]
     # Spatial join of nhpd and boundary shape
     nhpd_select = gpd.sjoin(shape, nhpd, how="inner", predicate="intersects")
+
     # Spatial join of dac and boundary shape
     def dac_selector(shape, level):
         if level == "Census Tract ID":
@@ -88,15 +98,14 @@ with st.spinner("Loading results..."):
         if level == "County":
             # Find first five characters of GEOID in dacs
             # return dac.loc[dac["GEOID"].str[:5].equals(shape["GEOID"].values[0][:5])]
-            return dac.drop(
-                dac[dac["GEOID"].str[:5].ne(shape["GEOID"].values[0])].index
-            )
+            return dac.drop(dac[dac["GEOID"].str[:5].ne(
+                shape["GEOID"].values[0])].index)
         if level == "State":
-            return dac.drop(
-                dac[dac["GEOID"].str[:2].ne(shape["GEOID"].values[0])].index
-            )
+            return dac.drop(dac[dac["GEOID"].str[:2].ne(
+                shape["GEOID"].values[0])].index)
         else:
-            return dac.drop(dac[dac["GEOID"].str[:].ne(shape["GEOID"].values[0])].index)
+            return dac.drop(dac[dac["GEOID"].str[:].ne(
+                shape["GEOID"].values[0])].index)
 
     dac_select = dac_selector(shape, level)
     if nhpd_select.empty:
@@ -105,8 +114,12 @@ with st.spinner("Loading results..."):
         st.write("No census tracts found for this location.")
     if dac_select.empty == False or nhpd_select.empty == False:
         with st.expander("Map"):
+            with open("dac_legend.png", "rb") as image_file:
+                encoded_string = base64.b64encode(
+                    image_file.read()).decode('utf-8')
 
-            dac_proj = dac_select.to_crs(pyproj.CRS.from_epsg(4326), inplace=False)
+            dac_proj = dac_select.to_crs(pyproj.CRS.from_epsg(4326),
+                                         inplace=False)
             dac_proj = dac_proj[~pd.isna(dac_proj.geometry)]
             colors = [
                 "red" if row.DAC_status == "Disadvantaged" else "black"
@@ -119,18 +132,25 @@ with st.spinner("Loading results..."):
 
             shape_geometry = json.loads(shape.geometry.to_json())
             # print(shape_geometry)
-            shape_coords = shape_geometry["features"][0]["geometry"]["coordinates"]
-            #st.write(shape_coords)
-            type=shape_geometry["features"][0]["geometry"]["type"]
+            shape_coords = shape_geometry["features"][0]["geometry"][
+                "coordinates"]
+            type = shape_geometry["features"][0]["geometry"]["type"]
             if type == "Polygon":
                 zoom, center = zoom_center(
-                lons=[i[0] for i in shape_coords[0]], lats=[i[1] for i in shape_coords[0]]
-            )
-            else:
-                zoom, center = zoom_center(
-                lons=[i[0] for i in shape_coords[0][0]], lats=[i[1] for i in shape_coords[0][0]]
-            )
-
+                    lons=[i[0] for i in shape_coords[0]],
+                    lats=[i[1] for i in shape_coords[0]])
+            else:  # For multipolygon - with islands
+                zooms_centers = []
+                for polygon in range(len(shape_coords)):
+                    zoom, center = zoom_center(
+                        lons=[i[0] for i in shape_coords[polygon][0]],
+                        lats=[i[1] for i in shape_coords[polygon][0]])
+                    zooms_centers.append((zoom, center))
+                # Choose smallest zoom as zoom level
+                zoom = min([i[0] for i in zooms_centers])
+                # Choose center of that zoom
+                center = [i[1] for i in zooms_centers if i[0] == zoom][0]
+                zoom = zoom - 1
             fig = px.choropleth_mapbox(
                 dac_proj,
                 geojson=dac_proj["geometry"],
@@ -138,34 +158,35 @@ with st.spinner("Loading results..."):
                 color="avg_energy_burden_natl_pctile",
                 color_continuous_scale="ylorbr",
                 mapbox_style="carto-positron",
-                zoom=0.9 * zoom,
+                zoom=0.8 * zoom,
                 center=center,
                 labels={
-                    "avg_energy_burden_natl_pctile": "Energy Burden Percentile",
-                    "DAC_status": "DAC Status",
+                    "avg_energy_burden_natl_pctile":
+                    "Energy Burden Percentile",
                     "GEOID": "Census Tract ID",
                 },
                 hover_data={
                     "GEOID": True,
-                    "DAC_status": True,
                     "avg_energy_burden_natl_pctile": True,
                 },
                 hover_name="DAC_status",
             )
             fig.update_layout(
                 mapbox={
-                    "style": "carto-positron",
+                    "style":
+                    "carto-positron",
                     "layers": [
                         {
                             "source": json.loads(shape.geometry.to_json()),
                             "type": "line",
                             "color": "gray",
-                            "line": {"width": 3},
+                            "line": {
+                                "width": 3
+                            },
                             "below": "traces",
                         },
                     ],
-                }
-            )
+                })
 
             fig.update_geos(fitbounds="geojson", visible=False)
             fig.update_traces(
@@ -187,9 +208,18 @@ with st.spinner("Loading results..."):
                 marker_size=5,
                 marker_color="gray",
                 opacity=0.5,
-                text=[nhpd_select["Property Name"].values],
-                )
-
+                text=[i for i in nhpd_select["Property Name"].values],
+            )
+            fig.add_layout_image(
+                dict(source=f'data:image/png;base64,{encoded_string}',
+                     xref="paper",
+                     yref="paper",
+                     x=1.035,
+                     y=1,
+                     sizex=0.3,
+                     sizey=0.3,
+                     xanchor="left",
+                     yanchor="bottom"))
             st.plotly_chart(fig, use_container_width=True)
 
             with open("fig.png", "rb") as file:
@@ -201,26 +231,22 @@ with st.spinner("Loading results..."):
         # Display the census tract and housing data for the selected boundary in tabular format and offer option to download
         if nhpd_select.empty == False:
             with st.expander("Housing Data"):
-                nhpd_display = (
-                    pd.DataFrame(nhpd_select.drop(["geometry"], axis=1).iloc[:, 8:])
-                    .reset_index()
-                    .drop(["index", "lat", "lon"], axis=1)
-                )
+                nhpd_display = (pd.DataFrame(
+                    nhpd_select.drop(["geometry"],
+                                     axis=1).iloc[:, 8:]).reset_index().drop(
+                                         ["index", "lat", "lon"], axis=1))
                 st.dataframe(nhpd_display)
-                st.download_button(
-                    label="Download Housing Data", data=nhpd_display.to_csv()
-                )
+                st.download_button(label="Download Housing Data",
+                                   data=nhpd_display.to_csv())
         if dac_select.empty == False:
             with st.expander("Census Tract Data"):
-                dac_display = (
-                    pd.DataFrame(dac_select.drop(["geometry"], axis=1))
-                    .reset_index()
-                    .drop(["index"], axis=1)
-                )
+                dac_display = (pd.DataFrame(
+                    dac_select.drop(["geometry"],
+                                    axis=1)).reset_index().drop(["index"],
+                                                                axis=1))
                 st.dataframe(dac_display)
-                st.download_button(
-                    label="Download Census Tract Data", data=dac_display.to_csv()
-                )
+                st.download_button(label="Download Census Tract Data",
+                                   data=dac_display.to_csv())
 if dac_select.empty == False or nhpd_select.empty == False:
 
     with st.spinner("Generating report..."):
@@ -228,7 +254,8 @@ if dac_select.empty == False or nhpd_select.empty == False:
         with open("fig.png", "rb") as f:
             encoded_string = base64.b64encode(f.read())
             map = encoded_string.decode("utf-8")
-            map = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(map)
+            map = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(
+                map)
         # Call helper function to create report
         generate_from_data(shape, map, dac_select, nhpd_select)
         # Save as a PDF

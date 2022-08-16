@@ -104,6 +104,51 @@ with faq_tab:
 
 with viz_tab:
     st.header("How-To: 🗺 Visualize")
+    st.markdown("### Navigating the Map: ")
+    st.markdown(
+        " * To expand the map, collapse the sidebar or click the link to open the map in a new tab."
+    )
+    st.markdown(
+        " * To pan, click and hold the left mouse button and drag to move the map."
+    )
+    st.markdown(
+        " * To collapse and uncollapse the legend, click the small carrot next to the legend title."
+    )
+    st.markdown(
+        " * To zoom, use the scroll bar or pinch the touchpad. Alternatively, use the “+” and “-” buttons in the bottom left to zoom in and out."
+    )
+    st.markdown(
+        " * To search for a specific location, use the search bar in the bottom left. If searching for a city or county, you’ll get more accurate results by specifying the state."
+    )
+    st.markdown("### Interactive Features: ")
+    st.markdown(
+        " * To display and remove any layers, click on the checkboxes in the legend."
+    )
+    st.markdown(
+        " * As you zoom in, county and census tract boundaries appear. The name of the county your mouse is hovering over is displayed in a pop-up."
+    )
+    st.markdown(
+        " * Click on any census tract or property to view a pop-up with more information."
+    )
+    st.markdown(
+        " * Several interactive widgets are displayed in the bottom or right sidebars, depending on how much the map is expanded. These allow for several helpful features."
+    )
+    st.markdown(
+        " * Click on the small paint drop icon, which displays “Apply Auto Style” on hover, to color the map according to the indicator in the title of the widget."
+    )
+    st.markdown(
+        " * Click the three small dots to “toggle” the widget, which is unexpanded by default. By toggling the widget, you can filter by category or histogram range to only view areas meeting the selected parameters on the map. The widget dynamically adjusts to display values representing only the area currently in the map view."
+    )
+
+    st.markdown(
+        "All of these features are demonstrated live in the video below.")
+
+    st.components.v1.iframe(
+        src="https://www.loom.com/embed/e0942e95df9a4a8ebf449f7ec9592d70",
+        height=520,
+        scrolling=True,
+    )
+
 with report_tab:
     st.header("How-To: 📈 Report")
     st.components.v1.iframe(

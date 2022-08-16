@@ -92,10 +92,11 @@ nhpd["lon"] = nhpd["Longitude"].apply(str_to_float)
 # Drop rows with NaN
 nhpd = nhpd.dropna(subset=["lat", "lon"])
 nhpd = gpd.GeoDataFrame(nhpd, geometry=gpd.points_from_xy(nhpd.lon, nhpd.lat))
-
+# Set CRS to EPSG:4326
+nhpd = nhpd.set_crs(4326, allow_override=True)
 print("Cleaned data, beginning to export")
 # Export carto_nhpd to CARTO
-carto_nhpd.to_csv("carto_data/carto_nhpd.csv", index=False)
+# carto_nhpd.to_csv("carto_data/carto_nhpd.csv", index=False)
 print("Done exporting Carto NHPD")
 
 # Export nhpd to REPORT as a geojson

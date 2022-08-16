@@ -78,30 +78,28 @@ def zoom_center(
 
     # longitudinal range by zoom level (20 to 1)
     # in degrees, if centered at equator
-    lon_zoom_range = np.array(
-        [
-            0.0007,
-            0.0014,
-            0.003,
-            0.006,
-            0.012,
-            0.024,
-            0.048,
-            0.096,
-            0.192,
-            0.3712,
-            0.768,
-            1.536,
-            3.072,
-            6.144,
-            11.8784,
-            23.7568,
-            47.5136,
-            98.304,
-            190.0544,
-            360.0,
-        ]
-    )
+    lon_zoom_range = np.array([
+        0.0007,
+        0.0014,
+        0.003,
+        0.006,
+        0.012,
+        0.024,
+        0.048,
+        0.096,
+        0.192,
+        0.3712,
+        0.768,
+        1.536,
+        3.072,
+        6.144,
+        11.8784,
+        23.7568,
+        47.5136,
+        98.304,
+        190.0544,
+        360.0,
+    ])
 
     if projection == "mercator":
         margin = 1.2
@@ -111,104 +109,132 @@ def zoom_center(
         lat_zoom = np.interp(height, lon_zoom_range, range(20, 0, -1))
         zoom = round(min(lon_zoom, lat_zoom), 2)
     else:
-        raise NotImplementedError(f"{projection} projection is not implemented")
+        raise NotImplementedError(
+            f"{projection} projection is not implemented")
 
     return zoom, center
 
 
-def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
-    tracts_html = "\n".join(
-        [
+def generate_from_data(shape,
+                       map,
+                       dac_select,
+                       nhpd_select,
+                       detailed,
+                       out_path="out.pdf"):
+    if detailed:
+        tracts_html = "\n".join([
             f"""
-        <section class="break-before">
-        <div class="h-8 w-full">&nbsp;</div>
-        <div class="font-bold text-xl text-white bg-[#00583C] p-2 w-80">Census Tract {tract['GEOID']}</div>
-        <div class="text-lg mt-2">
-            <div class="inline-block align-top mr-8">
-            <b>City:</b> {tract['city']}</br>
-            <b>County:</b> {tract['county_name']}</br>
-            <b>State:</b> {tract['county_name'][-2:]}</br>
-            <b>Population:</b> {tract['population']} </br>
-            </div>
-            <div class="inline-block align-top">
-            <b>DAC Status:</b> <mark class="{highlight(tract['DAC_status'])}">{tract['DAC_status']}</mark></br>
-            <b>QCT Status:</b> <mark class="{highlight(tract['QCT_status'])}">{tract['QCT_status']}</mark></br>
-            <b>State Ranking:</b> <mark class="{highlight(tract['tract_state_percentile'])}">{tract['tract_state_percentile']}</mark> </br>
-            <b>National Ranking:</b> <mark class="{highlight(tract['tract_national_percentile'])}">{tract['tract_national_percentile']}</mark> </br>
-            </div>
-        </p>
-        <table class="mt-4">
-            <tr>
-            <th>Indicator</th>
-            <th class="w-[70%]">Percentile</th>
-            </tr>
-            <tr>
-            <td>Energy Burden</td>
-            <td>
-                <div class="{color_bar(tract["avg_energy_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_energy_burden_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["avg_energy_burden_natl_pctile"]}</div>
-            </td>
-            </tr>
-            <tr>
-            <td>Housing Burden</td>
-            <td>
-                <div class="{color_bar(tract["avg_housing_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_housing_burden_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["avg_housing_burden_natl_pctile"]}</div>
-            </td>
-            </tr>
+            <section class="break-before">
+            <div class="h-8 w-full">&nbsp;</div>
+            <div class="font-bold text-xl text-white bg-[#00583C] p-2 w-80">Census Tract {tract['GEOID']}</div>
+            <div class="text-lg mt-2">
+                <div class="inline-block align-top mr-8">
+                <b>City:</b> {tract['city']}</br>
+                <b>County:</b> {tract['county_name']}</br>
+                <b>State:</b> {tract['county_name'][-2:]}</br>
+                <b>Population:</b> {tract['population']} </br>
+                </div>
+                <div class="inline-block align-top">
+                <b>DAC Status:</b> <mark class="{highlight(tract['DAC_status'])}">{tract['DAC_status']}</mark></br>
+                <b>QCT Status:</b> <mark class="{highlight(tract['QCT_status'])}">{tract['QCT_status']}</mark></br>
+                <b>State Ranking:</b> <mark class="{highlight(tract['tract_state_percentile'])}">{tract['tract_state_percentile']}</mark> </br>
+                <b>National Ranking:</b> <mark class="{highlight(tract['tract_national_percentile'])}">{tract['tract_national_percentile']}</mark> </br>
+                </div>
+            </p>
+            <table class="mt-4">
                 <tr>
-            <td>Transport Burden</td>
-            <td>
-                <div class="{color_bar(tract["avg_transport_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_transport_burden_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["avg_transport_burden_natl_pctile"]}</div>
-            </td>
-            </tr>
-            <tr>
-            <td>Low Income (AMI)</td>
-            <td>
-                <div class="{color_bar(tract["lowincome_ami_pct_natl_pctile"])}" style="width: {percent_bar(tract["lowincome_ami_pct_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["lowincome_ami_pct_natl_pctile"]}</div>
-            </td>
-            </tr>
-            <tr>
-            <td>Nonwhite Population</td>
-            <td>
-                <div class="{color_bar(tract["nonwhite_pct_natl_pctile"])}" style="width: {percent_bar(tract["nonwhite_pct_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["nonwhite_pct_natl_pctile"]}</div>
-            </td>
-            </tr>
-            <tr>
-            <td>Incomplete Plumbing</td>
-            <td>
-                <div class="{color_bar(tract["incomplete_plumbing_pct_natl_pctile"])}" style="width: {percent_bar(tract["incomplete_plumbing_pct_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["incomplete_plumbing_pct_natl_pctile"]}</div>
-            </td>
-            </tr>
-            <td>Lead Paint</td>
-            <td>
-                <div class="{color_bar(tract["lead_paint_pct_natl_pctile"])}" style="width: {percent_bar(tract["lead_paint_pct_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["lead_paint_pct_natl_pctile"]}</div>
-            </td>
-            </tr>
-            <td>Non-Grid Heating</td>
-            <td>
-                <div class="{color_bar(tract["nongrid_heat_pct_natl_pctile"])}" style="width: {percent_bar(tract["nongrid_heat_pct_natl_pctile"])}%"></div>
-                <div class="inline-block align-middle">{tract["nongrid_heat_pct_natl_pctile"]}</div>
-            </td>
-            </tr>
-        </table>
-        </p>
-        </section>
-        """
-            for _, tract in dac_select.sort_values(
-                by=["avg_energy_burden_natl_pctile"], ascending=False
-            ).iterrows()
-        ]
-    )
+                <th>Indicator</th>
+                <th class="w-[70%]">Percentile</th>
+                </tr>
+                <tr>
+                <td>Energy Burden</td>
+                <td>
+                    <div class="{color_bar(tract["avg_energy_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_energy_burden_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["avg_energy_burden_natl_pctile"]}</div>
+                </td>
+                </tr>
+                <tr>
+                <td>Housing Burden</td>
+                <td>
+                    <div class="{color_bar(tract["avg_housing_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_housing_burden_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["avg_housing_burden_natl_pctile"]}</div>
+                </td>
+                </tr>
+                    <tr>
+                <td>Transport Burden</td>
+                <td>
+                    <div class="{color_bar(tract["avg_transport_burden_natl_pctile"])}" style="width: {percent_bar(tract["avg_transport_burden_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["avg_transport_burden_natl_pctile"]}</div>
+                </td>
+                </tr>
+                <tr>
+                <td>Low Income (AMI)</td>
+                <td>
+                    <div class="{color_bar(tract["lowincome_ami_pct_natl_pctile"])}" style="width: {percent_bar(tract["lowincome_ami_pct_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["lowincome_ami_pct_natl_pctile"]}</div>
+                </td>
+                </tr>
+                <tr>
+                <td>Nonwhite Population</td>
+                <td>
+                    <div class="{color_bar(tract["nonwhite_pct_natl_pctile"])}" style="width: {percent_bar(tract["nonwhite_pct_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["nonwhite_pct_natl_pctile"]}</div>
+                </td>
+                </tr>
+                <tr>
+                <td>Incomplete Plumbing</td>
+                <td>
+                    <div class="{color_bar(tract["incomplete_plumbing_pct_natl_pctile"])}" style="width: {percent_bar(tract["incomplete_plumbing_pct_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["incomplete_plumbing_pct_natl_pctile"]}</div>
+                </td>
+                </tr>
+                <td>Lead Paint</td>
+                <td>
+                    <div class="{color_bar(tract["lead_paint_pct_natl_pctile"])}" style="width: {percent_bar(tract["lead_paint_pct_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["lead_paint_pct_natl_pctile"]}</div>
+                </td>
+                </tr>
+                <td>Non-Grid Heating</td>
+                <td>
+                    <div class="{color_bar(tract["nongrid_heat_pct_natl_pctile"])}" style="width: {percent_bar(tract["nongrid_heat_pct_natl_pctile"])}%"></div>
+                    <div class="inline-block align-middle">{tract["nongrid_heat_pct_natl_pctile"]}</div>
+                </td>
+                </tr>
+            </table>
+            </p>
+            </section>
+            """ for _, tract in
+            dac_select.sort_values(by=["avg_energy_burden_natl_pctile"],
+                                   ascending=False).iterrows()
+        ])
 
-    nhpd_html = "\n".join(
-        [
+    else:
+        tracts_html = "\n".join([
             f"""
+            <section class="break-before">
+            <div class="h-8 w-full">&nbsp;</div>
+            <div class="font-bold text-xl text-white bg-[#00583C] p-2 w-80">Census Tract {tract['GEOID']}</div>
+            <div class="text-lg mt-2">
+                <div class="inline-block align-top mr-8">
+                <b>City:</b> {tract['city']}</br>
+                <b>County:</b> {tract['county_name']}</br>
+                <b>Energy Burden:</b> {tract["avg_energy_burden_natl_pctile"]}</br>
+                <b>Population:</b> {tract['population']} </br>
+                </div>
+                <div class="inline-block align-top">
+                <b>DAC Status:</b> <mark class="{highlight(tract['DAC_status'])}">{tract['DAC_status']}</mark></br>
+                <b>QCT Status:</b> <mark class="{highlight(tract['QCT_status'])}">{tract['QCT_status']}</mark></br>
+                <b>State Ranking:</b> <mark class="{highlight(tract['tract_state_percentile'])}">{tract['tract_state_percentile']}</mark> </br>
+                <b>National Ranking:</b> <mark class="{highlight(tract['tract_national_percentile'])}">{tract['tract_national_percentile']}</mark> </br>
+                </div>
+            </section>
+            """ for _, tract in
+            dac_select.sort_values(by=["avg_energy_burden_natl_pctile"],
+                                   ascending=False).iterrows()
+        ])
+
+    nhpd_html = "\n".join([
+        f"""
         <section class="break-before">
         <div class="h-8 w-full">&nbsp;</div>
         <div class="font-bold text-xl text-white bg-[#69BE28] p-2 w-full mt-8">Property: {property["Property Name"]}</div>
@@ -232,10 +258,8 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
             </div>
         </p>
         </section>
-        """
-            for _, property in nhpd_select.iterrows()
-        ]
-    )
+        """ for _, property in nhpd_select.iterrows()
+    ])
 
     with open("simple-styles.css", "r") as f:
         style = f.read()
@@ -253,7 +277,7 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
     </head>
     <body class="w-screen">
         <div class="w-full h-fit bg-[#00583C] p-2 px-4 relative">
-            <h1 class="text-white font-bold block text-2xl">Equity Tool Report</h1>
+            <h1 class="text-white font-bold block text-2xl">NBUC Equity Tool Report</h1>
             <h1 class="text-white font-bold block text-lg absolute top-0 pt-2.5" style="right: 0px; width: 190px;">
                 {datetime.now().strftime("%m/%d/%Y %H:%M:%S")}
             </h1>
@@ -316,69 +340,64 @@ def generate_from_data(shape, map, dac_select, nhpd_select, out_path="out.pdf"):
     # subprocess.call(
     #     ["lessc", "templates/compiled-styles.css", "templates/simple-styles.css"]
     # )
-    pdfkit.from_string(html, out_path, options=options, css="simple-styles.css")
+    pdfkit.from_string(html,
+                       out_path,
+                       options=options,
+                       css="simple-styles.css")
 
 
 if __name__ == "__main__":
     # TESTING DATA
-    shape = pd.DataFrame(
-        {
-            "NAME": ["San Diego County"],
-        }
-    )
+    shape = pd.DataFrame({
+        "NAME": ["San Diego County"],
+    })
 
-    dac_select = pd.DataFrame(
-        {
-            "GEOID": ["012345678910"],
-            "city": ["San Diego"],
-            "county_name": ["San Diego"],
-            "population": [4444.22],
-            "DAC_status": ["Disadvantaged"],
-            "QCT_status": ["Not Eligible"],
-            "lead_paint_pct_natl_pctile": [78.81],
-            "avg_energy_burden_natl_pctile": [11.11],
-            "avg_housing_burden_natl_pctile": [50],
-            "avg_transport_burden_natl_pctile": [55.53],
-            "incomplete_plumbing_pct_natl_pctile": [0.0],
-            "lowincome_ami_pct_natl_pctile": [23.1],
-            "nongrid_heat_pct_natl_pctile": [100.00],
-            "nonwhite_pct_natl_pctile": [35.4],
-            "tract_national_percentile": [0.0],
-            "tract_state_percentile": [100.00],
-        }
-    )
+    dac_select = pd.DataFrame({
+        "GEOID": ["012345678910"],
+        "city": ["San Diego"],
+        "county_name": ["San Diego"],
+        "population": [4444.22],
+        "DAC_status": ["Disadvantaged"],
+        "QCT_status": ["Not Eligible"],
+        "lead_paint_pct_natl_pctile": [78.81],
+        "avg_energy_burden_natl_pctile": [11.11],
+        "avg_housing_burden_natl_pctile": [50],
+        "avg_transport_burden_natl_pctile": [55.53],
+        "incomplete_plumbing_pct_natl_pctile": [0.0],
+        "lowincome_ami_pct_natl_pctile": [23.1],
+        "nongrid_heat_pct_natl_pctile": [100.00],
+        "nonwhite_pct_natl_pctile": [35.4],
+        "tract_national_percentile": [0.0],
+        "tract_state_percentile": [100.00],
+    })
 
     for col in dac_select.columns:
         if "pctile" in col or "percentile" in col:
             dac_select[col + "_bars"] = round(0.93 * dac_select[col])
 
-    nhpd_select = pd.DataFrame(
-        {
-            "Property Name": ["Lone Bluffs"],
-            "Street Address": ["14230 San Diego Ave"],
-            "City": ["San Diego"],
-            "County": ["San Diego"],
-            "State": ["CA"],
-            "Start Date": ["2019-01-01"],
-            "End Date": ["2019-02-01"],
-            "Earliest Construction Date": ["2019-01-01"],
-            "Latest Construction Date": ["2019-02-01"],
-            "Rent to FMR Ratio": [1],
-            "Subsidy Name": ["Section 8"],
-            "Subsidy Subname": ["PRAC"],
-            "Owner Name": ["Happy Villages Apartments"],
-            "Known Total Units": [50],
-            "Assisted Units": [15],
-            "Zip Code": ["92129"],
-        }
-    )
+    nhpd_select = pd.DataFrame({
+        "Property Name": ["Lone Bluffs"],
+        "Street Address": ["14230 San Diego Ave"],
+        "City": ["San Diego"],
+        "County": ["San Diego"],
+        "State": ["CA"],
+        "Start Date": ["2019-01-01"],
+        "End Date": ["2019-02-01"],
+        "Earliest Construction Date": ["2019-01-01"],
+        "Latest Construction Date": ["2019-02-01"],
+        "Rent to FMR Ratio": [1],
+        "Subsidy Name": ["Section 8"],
+        "Subsidy Subname": ["PRAC"],
+        "Owner Name": ["Happy Villages Apartments"],
+        "Known Total Units": [50],
+        "Assisted Units": [15],
+        "Zip Code": ["92129"],
+    })
     image = {}
 
     with open("fig.png", "rb") as f:
         encoded_string = base64.b64encode(f.read())
         image["map"] = encoded_string.decode("utf-8")
         image[
-            "map"
-        ] = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(
-            image["map"]
-        )
+            "map"] = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(
+                image["map"])

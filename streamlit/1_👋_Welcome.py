@@ -142,7 +142,6 @@ with viz_tab:
 
     st.markdown(
         "All of these features are demonstrated live in the video below.")
-
     st.components.v1.iframe(
         src="https://www.loom.com/embed/e0942e95df9a4a8ebf449f7ec9592d70",
         height=520,
@@ -151,8 +150,34 @@ with viz_tab:
 
 with report_tab:
     st.header("How-To: 📈 Report")
+    st.markdown(
+        "1. Select a level from the options (Census Tract ID, County, State, or Tribe or Territory) to search by. Click Submit to continue."
+    )
+    st.markdown(
+        "2. In the box that appears, type a location and/or select from the dropdown. Press Search to continue."
+    )
+    st.markdown(
+        "3. Optionally, before searching, modify the report parameters by clicking on the “Additional Report Parameters” section to expand it. Use the slider to adjust the Energy Burden range. Check “Disadvantaged Status” to only include “Disadvantaged” census tracts in the final report. Check “Eligible Status” to only include Housing Tax Credit Eligible census tracts in the final report. Check “Indicators Reported” to include the values for indicators other than Energy Burden for each census tract included in the report. Once finished modifying the parameters, press Search to continue. Note that these parameters only affect the output of the downloadable report, not the interactive map or data tables."
+    )
+    st.markdown(
+        "4. Wait for up to one minute for results to appear. A spinning progress indicator will display on the screen until the results have finished loading."
+    )
+    st.markdown(
+        "5. A message may display indicating that no housing properties and/or census tracts were found for your search parameters. This may occur for a Tribe or Territory search, or any Census Tract ID or County that does not have public or subsidized housing in it."
+    )
+    st.markdown(
+        "6. Click on “Housing Data” or “Census Tract Data” to expand the sections. A table with all search results is displayed. The table is interactive; you can scroll vertically and horizontally. Click the diagonal double arrow icon in the top right to expand the table to the full width of the screen. Double click on any header to sort by that column. Finally, download the data table as a csv and reset the search by clicking the button below the table."
+    )
+    st.markdown(
+        "7. Click on “Map” to expand the interactive map. Hold down the left mouse and drag to pan. Scroll or pinch the trackpad to zoom; alternatively, click the “+” and “-” icons in the top right toolbar. Click the “home” icon in the top right toolbar to reset the view. Click the diagonal double arrow icon in the top right to expand the map to the full width of the screen. More information about the census tracts (colored by Energy Burden Percentile, with a red border if “Disadvantaged”) and affordable housing properties (black circles) can be viewed in a pop-up by hovering over them with a mouse. Click on the “Download Map” button to download an image of the map to your device."
+    )
+    st.markdown(
+        "8. Click on “Download Report” to download a file with a full report to your local device."
+    )
+    st.markdown(
+        "All of these features are demonstrated live in the video below.")
     st.components.v1.iframe(
-        src="https://www.loom.com/embed/a3f0d4a9cd0148dd897318a1265c4bbb",
+        src="https://www.loom.com/embed/e0942e95df9a4a8ebf449f7ec9592d70",
         height=520,
         scrolling=True,
     )

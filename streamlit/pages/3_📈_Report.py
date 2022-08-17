@@ -164,7 +164,6 @@ def create_map(shape, dac_select, nhpd_select):
             # Choose center of that zoom
             center = [i[1] for i in zooms_centers if i[0] == zoom][0]
             zoom = zoom - 1
-
         with open("dac_legend.png", "rb") as image_file:
             encoded_string = base64.b64encode(
                 image_file.read()).decode('utf-8')
@@ -223,15 +222,8 @@ def create_map(shape, dac_select, nhpd_select):
             marker_line_width=stroke_width,
             marker_opacity=0.5,
         )
-        trace_dummy = go.Scatter(
-            x=[0, 0, 0],  # Data is irrelevant since it won't be shown
-            y=[0, 0, 0],
-            name='Whatever Trace',
-            showlegend=True,
-            visible="legendonly")
-        fig.add_trace(trace_dummy)
         # Save the map as an image before adding housing data to enable the report to display it
-        # png = fig.write_image("fig.png")
+        png = fig.write_image("fig.png")
         # Add housing data to the map
         if not nhpd_select.empty:
             fig.add_scattermapbox(

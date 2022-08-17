@@ -3,10 +3,6 @@ FROM debian:stable-slim
 ## Basic dependencies
 RUN apt-get clean && apt-get update -y -qq
 RUN apt-get install -y curl git build-essential
-RUN echo "deb http://us.archive.ubuntu.com/ubuntu/ xenial main universe" >> /etc/apt/sources.list
-RUN echo "deb-src http://us.archive.ubuntu.com/ubuntu/ xenial main universe" >> /etc/apt/sources.list
-RUN apt-get update
-RUN ["apt-get", "install", "-y", "libsm6", "libxext6", "libxrender-dev"]
 
 # Install Anaconda3
 ENV PATH="/root/miniconda3/bin:${PATH}"
@@ -35,4 +31,4 @@ RUN python -m pip install -r requirements.txt
 EXPOSE 8501
 COPY . /app
 WORKDIR /app/streamlit
-CMD ["streamlit", "hello"]
+CMD ["streamlit","run","1_👋_Welcome.py"]

@@ -3,11 +3,9 @@ geopandas
 numpy
 rtree
 shapely
-fiona
-s3fs
 kaleido
 plotly
 pyproj
-pdfkit
 openpyxl
-bokeh
+fpdf2
+protobuf~=3.19.0

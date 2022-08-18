@@ -3,13 +3,8 @@ geopandas
 numpy
 rtree
 shapely
-fiona
 kaleido
 plotly
 pyproj
-pdfkit
 openpyxl
 fpdf2
-pillow
-defusedxml
-svg.path

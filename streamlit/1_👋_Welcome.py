@@ -177,7 +177,7 @@ with report_tab:
     st.markdown(
         "All of these features are demonstrated live in the video below.")
     st.components.v1.iframe(
-        src="https://www.loom.com/embed/e0942e95df9a4a8ebf449f7ec9592d70",
+        src="https://www.loom.com/embed/28b6127ea16e4bad8c5bab0408629e89",
         height=520,
         scrolling=True,
     )

@@ -11,6 +11,7 @@ from datetime import datetime
 import base64
 import pyproj
 from helpers import generate_from_data, zoom_center
+from pdftest import generate_pdf
 
 st.set_page_config(
     page_title="Report",
@@ -164,7 +165,7 @@ def create_map(shape, dac_select, nhpd_select):
             # Choose center of that zoom
             center = [i[1] for i in zooms_centers if i[0] == zoom][0]
             zoom = zoom - 1
-        with open("dac_legend.png", "rb") as image_file:
+        with open("legend.png", "rb") as image_file:
             encoded_string = base64.b64encode(
                 image_file.read()).decode('utf-8')
         dac_proj = dac_select.to_crs(pyproj.CRS.from_epsg(4269), inplace=False)
@@ -199,7 +200,7 @@ def create_map(shape, dac_select, nhpd_select):
             },
             hover_name="DAC_status",
         )
-        fig.update_layout(
+        fig.update_layout(margin=dict(l=20, r=20, t=0, b=0),
             mapbox={
                 "style":
                 "carto-positron",
@@ -235,23 +236,9 @@ def create_map(shape, dac_select, nhpd_select):
                 opacity=0.5,
                 text=[i for i in nhpd_select["Property Name"].values],
             )
-        # Add Disadvantaged legend image to map
-        if not dac_select.empty:
-            fig.add_layout_image(
-                dict(source=f'data:image/png;base64,{encoded_string}',
-                     xref="paper",
-                     yref="paper",
-                     x=1.035,
-                     y=1,
-                     sizex=0.3,
-                     sizey=0.3,
-                     xanchor="left",
-                     yanchor="bottom"))
-
-        st.image("dac_legend.png")
         # Plot map on Streamlit page
         st.plotly_chart(fig, use_container_width=True)
-        # Create button to download map image
+        st.components.v1.html(html=f'<img src="data:image/png;base64,{encoded_string}" alt="0" style="width: 35%; display: block; margin-left: 20px; margin-right: auto; margin-top: 0px;" align="left">', height=50)        # Create button to download map image
         with open("fig.png", "rb") as file:
             btn = st.download_button(
                 label="Download Map",
@@ -272,6 +259,10 @@ def report_data_filter(dac_select, eb, dac_filter, qct_filter):
     if qct_filter:
         # Filter dac_select by QCT status
         dac_select = dac_select.loc[dac_select["QCT_status"] == "Eligible"]
+    # Create a new column called "DAC_check" with a checkmark if the row has "DAC_status" == "Disadvantaged" and a cross if it doesn't
+    dac_select["DAC_check"] = dac_select["DAC_status"].apply(lambda x: "Yes" if x == "Disadvantaged" else "No")
+    # Create a new column called "QCT_check" with a checkmark if the row has "QCT_status" == "Eligible" and a cross if it doesn't
+    dac_select["QCT_check"] = dac_select["QCT_status"].apply(lambda x: "Yes" if x == "Eligible" else "No")
     return dac_select
 
 
@@ -342,10 +333,11 @@ if __name__ == "__main__":
                     # Call helper function to create report
                     dac_select = report_data_filter(dac_select, eb, dac_filter,
                                                     qct_filter)
-                    generate_from_data(shape, map, dac_select, nhpd_select,
-                                       detailed)
+                    # generate_from_data(shape, map, dac_select, nhpd_select,
+                    #                    detailed)
+                    generate_pdf(shape, "fig.png", dac_select, nhpd_select, detailed, out_path="report.pdf")
                     # Save as a PDF
-                    with open("out.pdf", "rb") as file:
+                    with open("report.pdf", "rb") as file:
                         btn = st.download_button(
                             label="Download Report",
                             data=file,

@@ -4,10 +4,12 @@ numpy
 rtree
 shapely
 fiona
-s3fs
 kaleido
 plotly
 pyproj
 pdfkit
 openpyxl
-bokeh
+fpdf2
+pillow
+defusedxml
+svg.path

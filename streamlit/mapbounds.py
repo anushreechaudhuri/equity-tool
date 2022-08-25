@@ -4,31 +4,6 @@ import base64
 import pdfkit
 import numpy as np
 
-
-def percent_bar(value):
-    try:
-        return round(0.93 * value)
-    except:
-        return 0
-
-
-def highlight(value):
-    try:
-        value = float(value)
-        if value > 50:
-            return "bad"
-    except ValueError:
-        if value == "Eligible" or value == "Disadvantaged":
-            return "bad"
-    return "good"
-
-
-def color_bar(value):
-    if value > 50:
-        return "bad-bar"
-    return "good-bar"
-
-
 def zoom_center(
     lons: tuple = None,
     lats: tuple = None,
@@ -114,6 +89,31 @@ def zoom_center(
 
     return zoom, center
 
+## OLD PDF GENERATION FUNCTIONS (need pdfkit, wkhtmltopdf, and simple-styles.css to run)
+
+
+def percent_bar(value):
+    try:
+        return round(0.93 * value)
+    except:
+        return 0
+
+
+def highlight(value):
+    try:
+        value = float(value)
+        if value > 50:
+            return "bad"
+    except ValueError:
+        if value == "Eligible" or value == "Disadvantaged":
+            return "bad"
+    return "good"
+
+
+def color_bar(value):
+    if value > 50:
+        return "bad-bar"
+    return "good-bar"
 
 def generate_from_data(shape,
                        map,

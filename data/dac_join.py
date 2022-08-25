@@ -12,6 +12,8 @@ import sys
 import os
 from os import mkdir
 from os.path import exists, sep
+import pyproj
+from shapely.validation import explain_validity, make_valid
 
 qct = pd.read_csv("raw/qct.csv", dtype=str)
 
@@ -157,21 +159,44 @@ for key in carto_names.keys():
     carto_dac[carto_names[key]] = carto_dac[key]
     carto_dac.drop(key, axis=1, inplace=True)
 
+# Export to geojson file in CARTO
+# carto_dac.to_file("carto_data/carto_dac.shp", driver="ESRI Shapefile")
+
+# Change projection
+dac = dac.to_crs(pyproj.CRS.from_epsg(4269), inplace=False)
+dac = dac[~pd.isna(dac.geometry)]
+for i, row in dac.iterrows():
+    try:
+        dac.at[i, "geometry"] = make_valid(row["geometry"])
+    except:
+        pass
 # Export to geojson file in REPORT
 dac.to_file("report_data/dac.geojson", driver="GeoJSON")
 # Export to pickle file in REPORT
 dac.to_pickle("report_data/dac.pkl")
-# Export to geojson file in CARTO
-dac.to_file("carto_data/carto_dac.shp", driver="ESRI Shapefile")
 print("DAC data exported to geojson and pickle files.")
 
 tt_shp["NAME"] = tt_shp["namelsad"]
 tt_shp["GEOID"] = tt_shp["geoid"]
 tt_shp = tt_shp[["GEOID", "NAME", "geometry"]]
 
-# Export tt_shp to geojson file in report and carto
-tt_shp.to_file("report_data/tt_shp.geojson", driver="GeoJSON")
+
+#Export to CARTO
 tt_shp.to_file("carto_data/tt_shp.geojson", driver="GeoJSON")
+
+
+# Change projection
+tt_shp = tt_shp.to_crs(pyproj.CRS.from_epsg(4269), inplace=False)
+tt_shp = tt_shp[~pd.isna(tt_shp.geometry)]
+for i, row in tt_shp.iterrows():
+    try:
+        tt_shp.at[i, "geometry"] = make_valid(row["geometry"])
+    except:
+        pass
+
+# Export to Geojson in REPORT
+tt_shp.to_file("report_data/tt_shp.geojson", driver="GeoJSON")
+
 # Export to pickle file in REPORT
 tt_shp.to_pickle("report_data/tt_shp.pkl")
 print("Tribes and territories data exported to geojson and pickle files.")

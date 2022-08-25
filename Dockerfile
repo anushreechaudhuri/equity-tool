@@ -28,6 +28,7 @@ RUN conda install -c conda-forge fiona
 RUN python -m pip install --upgrade pip
 COPY streamlit/requirements.txt ./requirements.txt
 RUN python -m pip install -r requirements.txt
+RUN python -m pip install pdfkit
 EXPOSE 8501
 COPY . /app
 WORKDIR /app/streamlit

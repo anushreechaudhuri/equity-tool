@@ -10,8 +10,8 @@ import os
 from datetime import datetime
 import base64
 import pyproj
-from helpers import generate_from_data, zoom_center
-from pdftest import generate_pdf
+from mapbounds import generate_from_data, zoom_center
+from pdfreport import generate_pdf
 
 st.set_page_config(
     page_title="Report",
@@ -30,10 +30,10 @@ st.title("Generate a Report for Your Location")
 def select_level():
     with st.form("Select Level"):
         level = st.radio(
-            options=("Census Tract ID", "County", "State",
+            options=("Census Tract ID", "City", "County", "State",
                      "Tribe or Territory"),
             label="Search By",
-            index=1,
+            index=2,
         )
         if st.form_submit_button(
                 "Submit", help="Select a geographic level to search by."):
@@ -48,33 +48,40 @@ def select_location(boundary, level):
                              label=f"Select a {level}",
                              index=1)
         with st.expander("Additional Report Parameters"):
-            col1, col2, col3, col4 = st.columns([1, 1.5, 1, 1])
+            col1, col2, col3 = st.columns([1, 1, 1])
             eb = col1.slider(
-                label="Energy Burden Range",
+                label="Energy Burden Percentile",
                 min_value=0,
                 max_value=100,
-                value=(50, 100),
+                value=(30, 100),
                 step=1,
                 help=
-                "Use the slider to select a range of Energy Burden values. Only census tracts within the selected range will be included in the report."
+                "Use the slider to select a range of Energy Burden Percentile values. Only census tracts within the selected range will be included in the report."
             )
             dac_filter = col2.checkbox(
-                label="Disadvantaged Status",
+                label="Disadvantaged Community Status",
                 value=True,
                 help=
                 "Check this box to only include Disadvantaged Census Tracts in the report."
             )
             qct_filter = col3.checkbox(
-                label="Eligible Status",
-                value=True,
+                label="Housing Tax Credit Eligible Status",
+                value=False,
                 help=
                 "Check this box to only include Housing Tax Credit Eligible Census Tracts in the report."
             )
-            detailed = col4.checkbox(
-                label="Indicators Reported",
+            col4, col5 = st.columns([1, 1])
+
+            cover_page = col4.checkbox(
+                label="Include Cover Page Only",
                 value=False,
                 help=
-                "Check this box to include detailed info on multiple indicators for each census tract in the report. "
+                "Check this box to only include a cover page with summary statistics of the selected location in the report."
+            )
+            include_nhpd = col5.checkbox(
+                label="Include Affordable Housing List",
+                value=False,
+                help="Check this box to include a full list of every affordable housing property in the report. You can download the housing data separately under the Housing Data tab below."
             )
         submitted = st.form_submit_button(
             "Search",
@@ -82,7 +89,7 @@ def select_location(boundary, level):
             "Select a location by typing in a location name or selecting from the dropdown. Expand the Additional Report Parameters section to change what data will be included in the report."
         )
         if submitted:
-            return (shape, eb, dac_filter, qct_filter, detailed)
+            return (shape, eb, dac_filter, qct_filter, cover_page, include_nhpd)
 
     return None
 
@@ -108,6 +115,13 @@ def load_boundary(level):
                 dac_boundary = pickle.load(f)
             dac_boundary["NAME"] = dac_boundary["GEOID"]
             return dac_boundary[["NAME", "geometry"]]
+        elif level == "City":
+            with open('../data/report_data/dac.pkl', "rb") as f:
+                dac_boundary = pickle.load(f)
+            # Drop columns where there is no city name
+            dac_boundary = dac_boundary[dac_boundary["city"].notna()]
+            dac_boundary["NAME"] = dac_boundary["city"] + " (" + dac_boundary["county_name"] + ")"
+            return dac_boundary[["city", "county_name", "NAME", "geometry"]]
         elif level == "County":
             with open('../data/report_data/counties.pkl', "rb") as f:
                 return pickle.load(f)
@@ -123,6 +137,11 @@ def dac_selector(dac, shape, level):
     if level == "Census Tract ID":
         return dac.drop(dac[dac["GEOID"].str[:].ne(
             shape["NAME"].values[0])].index)
+    if level == "City":
+        dac = dac.drop(dac[dac["city"].str[:].ne(
+            shape["city"].values[0])].index)
+        return dac.drop(dac[dac["county_name"].str[:].ne(
+            shape["county_name"].values[0])].index)
     if level == "County":
         return dac.drop(dac[dac["GEOID"].str[:5].ne(
             shape["GEOID"].values[0])].index)
@@ -144,9 +163,7 @@ def dac_selector(dac, shape, level):
 
 
 def create_map(shape, dac_select, nhpd_select):
-    with st.expander("Map"):
-        if shape.crs != "EPSG:4326" or shape.crs != "EPSG:4269":
-            shape = shape.to_crs(pyproj.CRS.from_epsg(4269), inplace=False)
+    with st.expander("Map", expanded=True):
         shape_geometry = json.loads(shape.geometry.to_json())
         shape_coords = shape_geometry["features"][0]["geometry"]["coordinates"]
         type = shape_geometry["features"][0]["geometry"]["type"]
@@ -168,21 +185,19 @@ def create_map(shape, dac_select, nhpd_select):
         with open("legend.png", "rb") as image_file:
             encoded_string = base64.b64encode(
                 image_file.read()).decode('utf-8')
-        dac_proj = dac_select.to_crs(pyproj.CRS.from_epsg(4269), inplace=False)
-        dac_proj = dac_proj[~pd.isna(dac_proj.geometry)]
         colors = [
             "red" if row.DAC_status == "Disadvantaged" else "black"
-            for _, row in dac_proj.iterrows()
+            for _, row in dac_select.iterrows()
         ]
         stroke_width = [
             5 if row.DAC_status == "Disadvantaged" else 0
-            for _, row in dac_proj.iterrows()
+            for _, row in dac_select.iterrows()
         ]
 
         fig = px.choropleth_mapbox(
-            dac_proj,
-            geojson=dac_proj["geometry"],
-            locations=dac_proj.index,
+            dac_select,
+            geojson=dac_select["geometry"],
+            locations=dac_select.index,
             color="avg_energy_burden_natl_pctile",
             color_continuous_scale="ylorbr",
             mapbox_style="carto-positron",
@@ -258,8 +273,7 @@ def report_data_filter(dac_select, eb, dac_filter, qct_filter):
                                     "Disadvantaged"]
     if qct_filter:
         # Filter dac_select by QCT status
-        dac_select = dac_select.loc[dac_select["QCT_status"] == "Eligible"]
-    # Create a new column called "DAC_check" with a checkmark if the row has "DAC_status" == "Disadvantaged" and a cross if it doesn't
+        dac_select = dac_select.loc[dac_select["QCT_status"] == "Eligible"]            # Create a new column called "DAC_check" with a checkmark if the row has "DAC_status" == "Disadvantaged" and a cross if it doesn't
     dac_select["DAC_check"] = dac_select["DAC_status"].apply(lambda x: "Yes" if x == "Disadvantaged" else "No")
     # Create a new column called "QCT_check" with a checkmark if the row has "QCT_status" == "Eligible" and a cross if it doesn't
     dac_select["QCT_check"] = dac_select["QCT_status"].apply(lambda x: "Yes" if x == "Eligible" else "No")
@@ -279,10 +293,10 @@ if __name__ == "__main__":
     if output == None:
         st.write("Click the Search button to continue.")
         st.stop()
-    location, eb, dac_filter, qct_filter, detailed = output
+    location, eb, dac_filter, qct_filter, cover_page, include_nhpd = output
     with st.spinner("Loading results (may take up to one minute)..."):
-        dac = load_dac().to_crs(boundary.crs)
-        nhpd = load_nhpd().to_crs(boundary.crs)
+        dac = load_dac()
+        nhpd = load_nhpd()
         shape = boundary.loc[boundary["NAME"] == location]
         nhpd_select = gpd.sjoin(shape,
                                 nhpd,
@@ -325,23 +339,18 @@ if __name__ == "__main__":
             if not dac_select.empty:
                 with st.spinner("Generating report..."):
                     # Open the map image saved earlier and add it to the report
-                    with open("fig.png", "rb") as f:
-                        encoded_string = base64.b64encode(f.read())
-                        map = encoded_string.decode("utf-8")
-                        map = '<img src="data:image/png;base64,{0}" class="w-full h-auto">'.format(
-                            map)
-                    # Call helper function to create report
-                    dac_select = report_data_filter(dac_select, eb, dac_filter,
-                                                    qct_filter)
-                    # generate_from_data(shape, map, dac_select, nhpd_select,
-                    #                    detailed)
-                    generate_pdf(shape, "fig.png", dac_select, nhpd_select, detailed, out_path="report.pdf")
+                    dac_select = report_data_filter(dac_select, eb, dac_filter, qct_filter)
+                    generate_pdf(shape, "fig.png", dac_select, nhpd_select, cover_page, include_nhpd, out_path="report.pdf")
                     # Save as a PDF
                     with open("report.pdf", "rb") as file:
+                        with st.expander("Report"):
+                            encoded_string = base64.b64encode(file.read()).decode('utf-8')
+                            pdf_display = f'<embed src="data:application/pdf;base64,{encoded_string}" width="700" height="400" type="application/pdf">'
+                            st.markdown(pdf_display, unsafe_allow_html=True)
                         btn = st.download_button(
                             label="Download Report",
                             data=file,
                             file_name=f"{shape.iloc[0]['NAME']}.pdf",
                             help=
-                            "Download the report as an HTML file and open in your browser to view. Use ⌘ + P or Ctrl + P to save as a PDF."
+                            "Download the report as a PDF file and open in your browser or PDF viewer, or expand the Report section above."
                         )

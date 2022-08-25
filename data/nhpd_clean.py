@@ -11,6 +11,7 @@ import os
 from os import mkdir
 from os.path import exists, sep
 import pickle
+import pyproj
 
 nhpd = pd.read_csv("raw/nhpd.csv")
 
@@ -94,6 +95,8 @@ nhpd = nhpd.dropna(subset=["lat", "lon"])
 nhpd = gpd.GeoDataFrame(nhpd, geometry=gpd.points_from_xy(nhpd.lon, nhpd.lat))
 # Set CRS to EPSG:4326
 nhpd = nhpd.set_crs(4326, allow_override=True)
+nhpd = nhpd.to_crs(pyproj.CRS.from_epsg(4269), inplace=False)
+
 print("Cleaned data, beginning to export")
 # Export carto_nhpd to CARTO
 # carto_nhpd.to_csv("carto_data/carto_nhpd.csv", index=False)

@@ -1,4 +1,4 @@
-# Equity Tool
+# Building Upgrade Equity Tool
 
 The equity tool is a mapping and reporting tool built using Streamlit and Carto.
 
